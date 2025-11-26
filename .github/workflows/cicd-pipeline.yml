@@ -45,7 +45,7 @@ jobs:
         echo "Running tests (replace with your test command)"
         # npm test
 
-   # ===== Snyk Scan =====
+  
 - name: Install Snyk CLI
   uses: snyk/actions/setup@v3
 
