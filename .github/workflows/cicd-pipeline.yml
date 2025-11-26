@@ -45,13 +45,14 @@ jobs:
         echo "Running tests (replace with your test command)"
         # npm test
 
-    # ===== Snyk Scan =====
-    - name: Snyk Security Scan
-      uses: snyk/actions/setup@v3
-    - name: Run Snyk Test
-      run: snyk test --severity-threshold=medium
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+   # ===== Snyk Scan =====
+- name: Install Snyk CLI
+  uses: snyk/actions/setup@v3
+
+- name: Run Snyk Test
+  run: snyk test --severity-threshold=medium
+  env:
+    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
 
 
   docker_build_push:
