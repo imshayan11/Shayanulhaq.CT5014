@@ -1,95 +1,39 @@
-name: CI/CD Pipeline
+name: Snyk Security Scan
 
 on:
   push:
-    branches: 
-      - main
-      - dev
-  workflow_dispatch:
-
-env:
-  IMAGE_NAME: sample-app   # change to your app name
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
 
 jobs:
-
-  build_test_sast:
-    name: Build, Test & SAST Scan
+  security:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    # Speed up builds (optional but recommended)
-    - name: Setup build cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.npm
-          ~/.cache
-        key: ${{ runner.os }}-deps-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-deps-
+      # Setup Node.js environment
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-    # Example Node build — replace with your tech stack
-    - name: Install dependencies
-      run: |
-        if [ -f package.json ]; then
-          npm install
-        else
-          echo "No package.json found, skipping."
-        fi
+      - name: Install Dependencies
+        run: npm install
 
-    - name: Run tests
-      run: |
-        echo "Running tests (replace with your test command)"
-        # npm test
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --sarif-file-output=snyk.sarif --file=package-lock.json
 
-  
-- name: Install Snyk CLI
-  uses: snyk/actions/setup@v3
-
-- name: Run Snyk Test
-  run: snyk test --severity-threshold=medium
-  env:
-    SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-
-  docker_build_push:
-    name: Build & Push Docker Image
-    needs: build_test_sast
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    # Create version tag automatically
-    - name: Generate Image Tag
-      id: vars
-      run: |
-        echo "TAG=$(date +'%Y%m%d.%H%M')-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-
-    - name: Login to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-    # Recommended: Buildx = faster, multi-platform, modern
-    - name: Setup Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v5
-      with:
-        push: true
-        tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}
-          ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest
-
-    - name: Display Published Images
-      run: |
-        echo "Pushed images:"
-        echo " → ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.TAG }}"
-        echo " → ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:latest"
+      - name: Upload Snyk scan results to GitHub Code Scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif
