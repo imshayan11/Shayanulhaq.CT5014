@@ -53,12 +53,12 @@ jobs:
  - name: Build and Push Docker Image
  uses: docker/build-push-action@v4
  with:
- context: 
- push: true
- tags: |
- ${{ secrets.DOCKER_USERNAME }}
- ${{ secrets.DOCKER_USERNAME }}
- push: true
+  context: .
+  push: true
+  tags: |
+    ${{ secrets.DOCKER_USERNAME }}/shayanulhaq.ct5014:latest
+    ${{ secrets.DOCKER_USERNAME }}/shayanulhaq.ct5014:${{ github.sha }}
+
  tags: |
  ${{ secrets.DOCKER_USERNAME }}/danishhussain-ct5014:latest
  ${{ secrets.DOCKER_USERNAME }}/danishhussain-ct5014:${{ github.sha }}
